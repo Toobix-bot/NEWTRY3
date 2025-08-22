@@ -7,6 +7,8 @@ from .llm_client import ensure_ollama_up
 from .ai_lifesim import run_lifesim
 from .ai_lifesim_gui import run_lifesim_gui
 from .ai_coplay import run_coplay
+from .ai_coplay_gui import run_coplay_gui
+from .launcher_gui import run_launcher
 from .number_guess import play_number_guess
 from .tic_tac_toe import play_tic_tac_toe
 
@@ -50,6 +52,8 @@ def main_menu() -> None:
         "4": run_lifesim,
         "5": run_lifesim_gui,
         "6": run_coplay,
+        "7": run_coplay_gui,
+    "8": run_launcher,
         "q": lambda: None,
     }
 
@@ -62,6 +66,8 @@ def main_menu() -> None:
         print("4) LifeSim: KI als Spielerin & Designerin")
         print("5) LifeSim GUI (pygame)")
         print("6) Co-Play: Ava (KI) + Ben (Mensch)")
+        print("7) Co-Play GUI (pygame)")
+        print("8) GUI-Launcher starten")
         print("q) Beenden")
         choice = prompt("Auswahl: ").strip().lower()
         if choice == "q":

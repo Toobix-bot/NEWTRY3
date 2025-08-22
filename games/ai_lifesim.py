@@ -1,5 +1,6 @@
 from typing import Dict, Any, List
-from .llm_client import chat, ensure_ollama_up, extract_json_block
+from .llm_client import chat, ensure_ollama_up, parse_ava_turn
+from .schemas import AvaTurn, WorldPatch
 
 SYSTEM = (
     "Du bist 'Ava', eine KI-Agentin in einer textbasierten Life-Simulation. "
@@ -110,58 +111,69 @@ def run_lifesim(max_turns: int = 12) -> None:
         {"role": "user", "content": f"Szene: {INTRO}\nZustand: {state}"}
     ]
 
-    for turn in range(1, max_turns + 1):
-        print("\n--- Runde", turn, "---")
+    for turn_idx in range(1, max_turns + 1):
+        print("\n--- Runde", turn_idx, "---")
         render_state(state)
 
+        # 1) KI-Zug holen und validieren
         try:
             content = chat(history)
         except Exception as e:
             print("KI-Fehler:", e)
             print("Tipp: Stelle sicher, dass das Modell 'gemma3:1b' vorhanden ist (z.B. 'ollama run gemma3:1b').")
             break
-        data = extract_json_block(content)
-        if not data:
-            print("Antwort nicht als JSON erkannt. Wiederhole...")
+
+        parsed: AvaTurn | None = parse_ava_turn(content)
+        if not parsed:
+            print("Antwort nicht valides JSON-Schema. Ich bitte die KI um korrektes Format…")
             history.append({"role": "assistant", "content": content})
-            history.append({"role": "user", "content": "Bitte halte dich strikt an das JSON-Format."})
+            history.append({"role": "user", "content": "Bitte antworte strikt als JSON im vereinbarten Schema."})
             continue
 
-        thoughts = str(data.get("thoughts", ""))
-        action = str(data.get("action", ""))
-        speech = str(data.get("speech", ""))
-        design_feedback = str(data.get("design_feedback", ""))
-        self_update = str(data.get("self_update", ""))
+        # 2) Mikro-Ebene anwenden
+        world_reaction = apply_action(state, parsed.action)
+        print("Ava sagt:", parsed.speech)
+        print("Welt:", world_reaction)
 
-        print("Ava denkt:", thoughts)
-        print("Ava sagt:", speech)
-        world_result = apply_action(state, action)
-        print("Welt:", world_result)
-        print("Design-Feedback:", design_feedback)
-        print("Selbst-Update:", self_update)
+        # 3) Makro-Ebene (optionale kleine Patches)
+        if parsed.world_patch:
+            wp: WorldPatch = parsed.world_patch
+            if wp.open_exit:
+                src = wp.open_exit.get("from")
+                direction = wp.open_exit.get("dir")
+                to = wp.open_exit.get("to")
+                if src and direction and to and src in state["world"]:
+                    state["world"].setdefault(src, {}).setdefault("exits", {})[direction] = to
+                    print(f"Design: Ausgang geöffnet {src} --{direction}--> {to}")
+            if wp.add_item:
+                at = wp.add_item.get("at")
+                item = wp.add_item.get("item")
+                if at and item and at in state["world"]:
+                    state["world"][at].setdefault("items", []).append(item)
+                    print(f"Design: Item hinzugefügt {item} @ {at}")
+            if wp.set_goal:
+                state["notes"] = (state.get("notes", "") + f"\nZiel: {wp.set_goal}").strip()
+                print(f"Ziel gesetzt: {wp.set_goal}")
 
-        if self_update:
-            state["notes"] = (state.get("notes", "") + " | " + self_update).strip(" |")
-        if "beenden" in action.lower() or "exit" in action.lower():
-            print("Ava beendet die Session.")
-            break
+        if parsed.design_feedback:
+            print("Feedback:", parsed.design_feedback)
+        if parsed.self_update:
+            state["ava_identity"] = (state.get("ava_identity", "Ava") + "; " + parsed.self_update).strip()
 
-        # Feed back to model
-        feedback = (
-            f"Weltreaktion: {world_result}\n"
-            f"Neuer Zustand: {state}\n"
-            f"Hinweis: Beantworte erneut im JSON-Format."
-        )
+        # 4) Kontext für nächsten Zug aktualisieren
         history.append({"role": "assistant", "content": content})
-        history.append({"role": "user", "content": feedback})
+        history.append({
+            "role": "user",
+            "content": (
+                f"Weltreaktion: {world_reaction}. Zustand: {state}. "
+                "Wenn sinnvoll, schlage kleine world_patch-Änderungen vor."
+            ),
+        })
 
-        # User-influence and step gating
-        user_in = input("Weiter mit Enter | Einfluss (optional eingeben) | q zum Beenden: ").strip()
+        # 5) Benutzer-Einfluss / Fortsetzen
+        user_in = input("Weiter mit Enter | Einfluss (optional) | q zum Beenden: ").strip()
         if user_in.lower() in ("q", "quit", "exit"):
             print("Session vom Benutzer beendet.")
             break
         if user_in:
-            history.append({
-                "role": "user",
-                "content": f"Benutzer-Hinweis: {user_in}"
-            })
+            history.append({"role": "user", "content": f"Benutzer-Hinweis: {user_in}"})

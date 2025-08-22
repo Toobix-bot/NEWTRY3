@@ -3,6 +3,8 @@ import urllib.request
 import urllib.error
 from typing import Dict, Any, List, Mapping, Optional, cast
 
+from .schemas import AvaTurn
+
 OLLAMA_API_URL = "http://localhost:11434/api/chat"
 DEFAULT_MODEL = "gemma3:1b"
 
@@ -53,3 +55,14 @@ def extract_json_block(text: str) -> Optional[Dict[str, Any]]:
         except Exception:
             return None
     return None
+
+
+def parse_ava_turn(text: str) -> Optional[AvaTurn]:
+    """Parse and validate an Ava turn from model output; returns None if invalid."""
+    raw = extract_json_block(text)
+    if not raw:
+        return None
+    try:
+        return AvaTurn.model_validate(raw)
+    except Exception:
+        return None

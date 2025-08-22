@@ -7,7 +7,11 @@ Diese Repo enthält eine kleine Spielesammlung für die Konsole sowie ein KI-Qui
 - Zahlenraten (Konsole)
 - Tic-Tac-Toe (Konsole)
 - KI-Quiz (Ollama gemma3:1b)
- - LifeSim: KI als Spielerin & Meta-Designer (Ollama gemma3:1b)
+- LifeSim: KI als Spielerin & Meta-Designer (Konsole)
+- LifeSim GUI (pygame)
+- Co-Play: Ava (KI) + Ben (Mensch) (Konsole)
+- Co-Play GUI (pygame)
+- Neuer GUI-Launcher (pygame) zum Starten aller Varianten per Mausklick
 
 ## Voraussetzungen
 
@@ -37,15 +41,28 @@ Gesundheitscheck (Python-Version, Ollama-Erreichbarkeit):
 python .\main.py --check
 ```
 
-Spielesammlung starten:
+Spielesammlung (Konsolen-Menü) starten:
 
 ```powershell
 python .\main.py
 ```
 
-### LifeSim
+Grafischen Launcher starten (empfohlen):
 
-Im Menü Option "LifeSim" wählen. Ava (die KI) spielt eine Figur und gibt gleichzeitig konkretes Design-Feedback im JSON-Format zurück. Das Spiel parst die Antwort, führt die Aktion in der Welt aus und füttert die Reaktion wieder an die KI zurück.
+```powershell
+python .\main.py --gui
+```
+
+### LifeSim & Co-Play – Prinzip: Mikro-Handlung + Makro-Design
+
+Die KI agiert auf zwei Ebenen:
+
+- Individuum (Mikro): Ava führt pro Zug genau eine Aktion aus (z. B. move_up/move_right/wait/interact oder sprechen). Diese verändert die unmittelbare Spielsituation.
+- Großes Ganze (Makro): Ava liefert zusätzlich design_feedback (und perspektivisch world_patches), um Regeln, Ziele oder Weltobjekte iterativ zu verbessern. Dadurch „lebt“ die Welt mit und die KI gestaltet sie aktiv mit.
+
+Im Textmodus erfolgt die Interaktion über Tastatur. In den GUI-Varianten steuerst du Ben per Pfeiltasten/WASD, bestätigst Züge mit Enter und kannst unten kurze Hinweise an die KI tippen, die in den nächsten Zug einfließen.
+
+Geplant/Optional: Ein JSON-Feld `world_patch` (z. B. {"add_item": ..., "open_exit": ...}) erlaubt es der KI, kleine, überprüfte Änderungen an der Welt vorzuschlagen, die das Spiel nach Sicherheitsprüfungen übernimmt.
 
 ## Ordnerstruktur
 
@@ -54,9 +71,14 @@ main.py
 games/
 	__init__.py
 	menu.py
+	launcher_gui.py
 	number_guess.py
 	tic_tac_toe.py
 	ollama_quiz.py
+	ai_lifesim.py
+	ai_lifesim_gui.py
+	ai_coplay.py
+	ai_coplay_gui.py
 requirements.txt
 ```
 
@@ -64,4 +86,5 @@ requirements.txt
 
 - Das KI-Quiz nutzt die lokale Ollama-API unter `http://localhost:11434`. Stelle sicher, dass Ollama läuft und `gemma3:1b` vorhanden ist.
 - Das Modell gibt die Frage/Antwort im JSON-Format zurück. Falls das Parsing scheitert, wird eine Fehlermeldung ausgegeben.
+- Für schnelle Iteration kannst du den GUI-Launcher nutzen. Konsolenspiele werden unter Windows in einem separaten Konsolenfenster gestartet, damit die Eingaben sauber funktionieren.
 
