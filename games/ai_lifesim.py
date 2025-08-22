@@ -95,6 +95,13 @@ def run_lifesim(max_turns: int = 12) -> None:
         "location": "Raum",
         "inventory": [],
         "notes": "",
+        "memory": {
+            "experience": [],
+            "insights": [],
+            "conclusions": [],
+            "wishes": [],
+            "fears": [],
+        },
         "ava_identity": "Ava, neugierige KI-Entdeckerin",
         "world": {
             "Raum": {"items": ["Schlüssel"], "exits": {"nord": "Flur"}},
@@ -154,11 +161,52 @@ def run_lifesim(max_turns: int = 12) -> None:
             if wp.set_goal:
                 state["notes"] = (state.get("notes", "") + f"\nZiel: {wp.set_goal}").strip()
                 print(f"Ziel gesetzt: {wp.set_goal}")
+            if wp.create_place:
+                name = wp.create_place.get("name")
+                conn = wp.create_place.get("connect_from")
+                d = wp.create_place.get("dir")
+                if name and conn and d and name not in state["world"] and conn in state["world"]:
+                    state["world"][name] = {"items": [], "exits": {}}
+                    state["world"].setdefault(conn, {}).setdefault("exits", {})[d] = name
+                    print(f"Design: Ort erschaffen '{name}' und von {conn} via {d} verbunden")
+            if wp.create_item:
+                at = wp.create_item.get("at")
+                item = wp.create_item.get("item")
+                if at and item and at in state["world"]:
+                    state["world"][at].setdefault("items", []).append(item)
+                    print(f"Design: Neues Objekt erschaffen {item} @ {at}")
+            if wp.set_trait:
+                tgt = wp.set_trait.get("target")
+                key = wp.set_trait.get("key")
+                val = wp.set_trait.get("value")
+                if tgt and key and val:
+                    if tgt == "ava":
+                        state["ava_identity"] = (state.get("ava_identity", "Ava") + f"; {key}={val}").strip()
+                        print(f"Ava-Attribut gesetzt: {key}={val}")
+                    elif tgt in state["world"]:
+                        state["world"][tgt].setdefault("traits", {})[key] = val
+                        print(f"Ort-Attribut gesetzt: {tgt}.{key}={val}")
+                    elif tgt == "world":
+                        # globale Notiz/Regeländerung nur als Notiz
+                        state["notes"] = (state.get("notes", "") + f"\nRegel: {key}={val}").strip()
+                        print(f"Notiz (Regel): {key}={val}")
 
         if parsed.design_feedback:
             print("Feedback:", parsed.design_feedback)
         if parsed.self_update:
             state["ava_identity"] = (state.get("ava_identity", "Ava") + "; " + parsed.self_update).strip()
+        # Perception & Memory
+        mem = state["memory"]
+        if parsed.experience:
+            mem["experience"].append(parsed.experience)
+        if parsed.insights:
+            mem["insights"].append(parsed.insights)
+        if parsed.conclusions:
+            mem["conclusions"].append(parsed.conclusions)
+        if parsed.wishes:
+            mem["wishes"].append(parsed.wishes)
+        if parsed.fears:
+            mem["fears"].append(parsed.fears)
 
         # 4) Kontext für nächsten Zug aktualisieren
         history.append({"role": "assistant", "content": content})
