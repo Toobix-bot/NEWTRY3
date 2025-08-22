@@ -1,3 +1,2 @@
-# Core requirements for the console game collection
-# We use only stdlib; no external packages required for now.
-# If you want colored output later, consider 'colorama'.
+# Core requirements
+pygame>=2.6.1,<3

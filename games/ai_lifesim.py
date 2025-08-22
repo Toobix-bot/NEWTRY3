@@ -154,3 +154,14 @@ def run_lifesim(max_turns: int = 12) -> None:
         )
         history.append({"role": "assistant", "content": content})
         history.append({"role": "user", "content": feedback})
+
+        # User-influence and step gating
+        user_in = input("Weiter mit Enter | Einfluss (optional eingeben) | q zum Beenden: ").strip()
+        if user_in.lower() in ("q", "quit", "exit"):
+            print("Session vom Benutzer beendet.")
+            break
+        if user_in:
+            history.append({
+                "role": "user",
+                "content": f"Benutzer-Hinweis: {user_in}"
+            })

@@ -5,11 +5,13 @@ from typing import Callable, Dict
 from .ollama_quiz import run_ollama_quiz
 from .llm_client import ensure_ollama_up
 from .ai_lifesim import run_lifesim
+from .ai_lifesim_gui import run_lifesim_gui
+from .ai_coplay import run_coplay
 from .number_guess import play_number_guess
 from .tic_tac_toe import play_tic_tac_toe
 
 
-def clear_screen():
+def clear_screen() -> None:
     os.system('cls' if os.name == 'nt' else 'clear')
 
 
@@ -22,7 +24,6 @@ def prompt(msg: str) -> str:
 
 def health_check(verbose: bool = False) -> bool:
     ok = True
-    # Python version
     if sys.version_info < (3, 9):
         ok = False
         if verbose:
@@ -31,7 +32,6 @@ def health_check(verbose: bool = False) -> bool:
         if verbose:
             print("Python version OK:", sys.version.split()[0])
 
-    # Ollama
     try:
         up = ensure_ollama_up(verbose=verbose)
         ok = ok and up
@@ -39,16 +39,17 @@ def health_check(verbose: bool = False) -> bool:
         ok = False
         if verbose:
             print("Ollama check error:", e)
-
     return ok
 
 
-def main_menu():
+def main_menu() -> None:
     actions: Dict[str, Callable[[], None]] = {
         "1": play_number_guess,
         "2": play_tic_tac_toe,
         "3": run_ollama_quiz,
         "4": run_lifesim,
+        "5": run_lifesim_gui,
+        "6": run_coplay,
         "q": lambda: None,
     }
 
@@ -59,6 +60,8 @@ def main_menu():
         print("2) Tic-Tac-Toe (Konsole)")
         print("3) KI-Quiz (Ollama gemma3:1b)")
         print("4) LifeSim: KI als Spielerin & Designerin")
+        print("5) LifeSim GUI (pygame)")
+        print("6) Co-Play: Ava (KI) + Ben (Mensch)")
         print("q) Beenden")
         choice = prompt("Auswahl: ").strip().lower()
         if choice == "q":
